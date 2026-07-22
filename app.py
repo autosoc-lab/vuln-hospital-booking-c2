@@ -6,7 +6,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import uvicorn
-from fastapi import FastAPI, File, Header, HTTPException, UploadFile, status
+from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile, status
 
 app = FastAPI()
 
@@ -42,6 +42,14 @@ def require_lab_token(x_lab_token: str | None) -> None:
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/")
+def root(request: Request):
+    logger.info("PINGBACK RECEIVED")
+    logger.info("client: %s", request.client)
+    logger.info("user-agent: %s", request.headers.get("user-agent"))
+    return {"ok": True}
 
 
 @app.post("/upload")
