@@ -31,10 +31,10 @@ docker compose up -d --build
 ```
 
 The FastAPI app runs inside Docker on port `8000`, and nginx exposes it on
-host port `80`.
+host port `8080`.
 
 ```bash
-curl http://127.0.0.1/health
+curl http://127.0.0.1:8080/health
 ```
 
 Stop the stack:
@@ -52,7 +52,7 @@ Launch an Ubuntu EC2 instance, then allow these inbound security group rules:
 | Type | Port | Source |
 | --- | ---: | --- |
 | SSH | 22 | Your IP |
-| HTTP | 80 | Your IP or lab network |
+| Custom TCP | 8080 | Your IP or lab network |
 
 Do not open port `8000` to the internet.
 
@@ -79,8 +79,8 @@ Check the service:
 
 ```bash
 docker compose ps
-curl http://127.0.0.1/health
-curl http://<EC2_PUBLIC_IP>/health
+curl http://127.0.0.1:8080/health
+curl http://<EC2_PUBLIC_IP>:8080/health
 ```
 
 View logs:
@@ -92,7 +92,7 @@ docker compose logs -f
 ## Upload Test
 
 ```bash
-curl -X POST http://127.0.0.1/upload \
+curl -X POST http://127.0.0.1:8080/upload \
   -H "X-Lab-Token: change-me" \
   -F "file=@./sample.txt"
 ```
